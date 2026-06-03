@@ -201,9 +201,13 @@ const emptyForm = { name: '', price: '', old_price: '', is_russian: false, categ
   
   const saveProfile = (e) => {
     e.preventDefault();
+    const phoneRegex = /^(\+7|8)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}$/;
+    if (profile.phone && !phoneRegex.test(profile.phone)) {
+      return toast.error('Неверный формат телефона! Пример: +7 (999) 000-00-00');
+    }
     axios.put('http://localhost:5000/api/profile', profile, authConfig)
       .then(() => toast.success('Профиль сохранен'))
-      .catch(() => toast.error('Ошибка сохранения профиля'));
+      .catch((err) => toast.error(err.response?.data?.error || 'Ошибка сохранения профиля'));
   };
 
   const handleFileUpload = async (e) => {
@@ -323,7 +327,7 @@ const emptyForm = { name: '', price: '', old_price: '', is_russian: false, categ
             <Route path="/admin" element={<AdminPage role={role} analytics={analytics} editingId={editingId} setEditingId={setEditingId} handleFileUpload={handleFileUpload} handleSubmitProduct={handleSubmitProduct} form={form} setForm={setForm} emptyForm={emptyForm} products={products} categories={categories} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} handleEditClick={handleEditClick} handleDeleteProduct={handleDeleteProduct} handleAssignDiscount={handleAssignDiscount} orders={orders} setOrders={setOrders} authConfig={authConfig} refreshAdminData={() => refreshAdminData(token)} />} />
           </Routes>
         </div>
-        <Footer token={token} />
+        <Footer token={token} categories={categories} />
       </div>
     </BrowserRouter>
   );

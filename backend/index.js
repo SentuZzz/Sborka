@@ -238,17 +238,6 @@ app.post('/api/products/:id/reviews', authenticateToken, async (req, res) => {
     res.status(500).json({ error: e.message }); 
   } 
 });
-app.put('/api/reviews/:id', isAdmin, async (req, res) => {
-  const { rating, comment } = req.body;
-  if (!rating || isNaN(rating) || rating < 1 || rating > 5) return res.status(400).json({ error: 'Рейтинг: 1-5' });
-  if (comment && (typeof comment !== 'string' || comment.length > 1000)) return res.status(400).json({ error: 'Комментарий: до 1000 символов' });
-  try {
-    await pool.query('UPDATE reviews SET rating=$1, comment=$2 WHERE id=$3', [rating, comment || null, req.params.id]);
-    res.json({ message: 'OK' });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
 app.delete('/api/reviews/:id', isAdmin, async (req, res) => { await pool.query('DELETE FROM reviews WHERE id=$1', [req.params.id]); res.json({ message: 'OK' }); });
 
 // ТОВАРЫ CRUD
@@ -265,6 +254,12 @@ app.post('/api/products', isAdmin, async (req, res) => {
   if (sku && (typeof sku !== 'string' || sku.length > 50)) return res.status(400).json({ error: 'SKU: до 50 символов' });
   
   try {
+    // Проверка на дубликаты (имя или описание)
+    const duplicate = await pool.query('SELECT id FROM products WHERE name=$1 OR full_description=$2 LIMIT 1', [name, full_description || null]);
+    if (duplicate.rows.length > 0) {
+      return res.status(400).json({ error: 'Товар с таким названием или описанием уже существует' });
+    }
+
     const r = await pool.query(`INSERT INTO products (name,price,old_price,is_russian,category,brand,short_description,full_description,specs,images,stock_count,sku) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`, 
       [name, price, old_price || null, is_russian || false, category || null, brand || null, short_description || null, full_description || null, specs || {}, images || [], stock_count || 0, sku || null]
     ); 
@@ -288,6 +283,12 @@ app.put('/api/products/:id', isAdmin, async (req, res) => {
   if (sku && (typeof sku !== 'string' || sku.length > 50)) return res.status(400).json({ error: 'SKU: до 50 символов' });
   
   try {
+    // Проверка на дубликаты при обновлении (исключая текущий ID)
+    const duplicate = await pool.query('SELECT id FROM products WHERE (name=$1 OR full_description=$2) AND id != $3 LIMIT 1', [name, full_description || null, req.params.id]);
+    if (duplicate.rows.length > 0) {
+      return res.status(400).json({ error: 'Товар с таким названием или описанием уже существует' });
+    }
+
     const r = await pool.query(`UPDATE products SET name=$1,price=$2,old_price=$3,is_russian=$4,category=$5,brand=$6,short_description=$7,full_description=$8,specs=$9,images=$10,stock_count=$11,sku=$12 WHERE id=$13 RETURNING *`, 
       [name, price, old_price || null, is_russian || false, category || null, brand || null, short_description || null, full_description || null, specs || {}, images || [], stock_count || 0, sku || null, req.params.id]
     ); 
@@ -325,8 +326,12 @@ app.delete('/api/wishlist/:id', authenticateToken, async (req, res) => { await p
 app.get('/api/profile', authenticateToken, async (req, res) => { const r = await pool.query('SELECT username,phone,address,email FROM users WHERE username=$1', [req.user.username]); res.json(r.rows[0]); });
 app.put('/api/profile', authenticateToken, async (req, res) => { 
   const { phone, address } = req.body;
-  if (phone && (typeof phone !== 'string' || phone.length > 50)) {
-    return res.status(400).json({ error: 'Телефон: до 50 символов' });
+  if (phone) {
+    const phoneRegex = /^(\+7|8)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}$/;
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({ error: 'Неверный формат телефона. Пример: +7 (900) 123-45-67' });
+    }
+    if (phone.length > 50) return res.status(400).json({ error: 'Телефон: до 50 символов' });
   }
   if (address && (typeof address !== 'string' || address.length > 500)) {
     return res.status(400).json({ error: 'Адрес: до 500 символов' });

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { FiEdit3, FiPlusCircle, FiShoppingBag, FiPackage, FiChevronDown, FiChevronUp, FiLock, FiGrid, FiTrash2 } from 'react-icons/fi';
+import { FiEdit3, FiPlusCircle, FiShoppingBag, FiPackage, FiChevronDown, FiChevronUp, FiLock, FiGrid, FiTrash2, FiSearch } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
@@ -32,6 +32,7 @@ const AdminPage = ({ role, analytics, editingId, setEditingId, handleFileUpload,
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
   const [newCatName, setNewCatName] = useState('');
+  const [adminProductSearch, setAdminProductSearch] = useState('');
 
   if (role !== 'admin') return <h2 style={{ textAlign: 'center', marginTop: '50px' }}>Доступ закрыт</h2>;
 
@@ -155,7 +156,18 @@ const AdminPage = ({ role, analytics, editingId, setEditingId, handleFileUpload,
           
           {/* ТАБЛИЦА ТОВАРОВ */}
           <div style={{ flex: '2 1 500px', background: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
-            <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Управление товарами ({products.length})</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+              <h2 style={{ fontSize: '20px', margin: 0 }}>Управление товарами ({products.length})</h2>
+              <div style={{ position: 'relative', flex: '1 1 200px', maxWidth: '300px' }}>
+                <FiSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
+                <input 
+                  placeholder="Поиск по названию или SKU" 
+                  value={adminProductSearch}
+                  onChange={e => setAdminProductSearch(e.target.value)}
+                  style={{ padding: '10px 10px 10px 35px', border: '1px solid #ddd', borderRadius: '6px', width: '100%', fontSize: '14px' }}
+                />
+              </div>
+            </div>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #eee' }}>
@@ -167,7 +179,9 @@ const AdminPage = ({ role, analytics, editingId, setEditingId, handleFileUpload,
                 </tr>
               </thead>
               <tbody>
-                {products.map(p => (
+                {products
+                  .filter(p => p.name.toLowerCase().includes(adminProductSearch.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(adminProductSearch.toLowerCase())))
+                  .map(p => (
                   <tr key={p.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
                     <td style={{ padding: '12px 8px', color: '#bbb', fontSize: '13px' }}>#{p.id}</td>
                     <td style={{ padding: '12px 8px' }}>

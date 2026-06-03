@@ -4,16 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 // Хохлома-орнамент для футера
 import khokhlomaFooter from '../assets/khokhloma-footer.png';
 
-const CATEGORIES = [
-  'Процессоры',
-  'Видеокарты',
-  'Материнские платы',
-  'Оперативная память',
-  'SSD-накопители',
-  'SSD',
-];
-
-const Footer = ({ token }) => {
+const Footer = ({ token, categories = [] }) => {
   const navigate = useNavigate();
 
   const handleCategoryClick = (category) => {
@@ -24,6 +15,8 @@ const Footer = ({ token }) => {
   const handleLinkClick = () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
+
+  const footerCategories = categories.slice(0, 4);
 
   const customerLinks = [
     { label: 'Доставка и оплата', to: '/info?tab=delivery' },
@@ -106,18 +99,29 @@ const Footer = ({ token }) => {
             Каталог
           </h4>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {CATEGORIES.map((cat) => (
-              <li key={cat}>
+            {footerCategories.map((cat) => (
+              <li key={cat.id}>
                 <button
-                  onClick={() => handleCategoryClick(cat)}
+                  onClick={() => handleCategoryClick(cat.name)}
                   style={{ background: 'none', border: 'none', color: '#888', textDecoration: 'none', fontSize: '14px', cursor: 'pointer', padding: 0, transition: 'color 0.2s', textAlign: 'left' }}
                   onMouseEnter={e => e.currentTarget.style.color = 'white'}
                   onMouseLeave={e => e.currentTarget.style.color = '#888'}
                 >
-                  {cat}
+                  {cat.name}
                 </button>
               </li>
             ))}
+            <li>
+              <Link
+                to="/"
+                onClick={handleLinkClick}
+                style={{ color: '#888', textDecoration: 'none', fontSize: '14px', transition: 'color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.color = 'white'}
+                onMouseLeave={e => e.currentTarget.style.color = '#888'}
+              >
+                Еще...
+              </Link>
+            </li>
           </ul>
         </div>
 
