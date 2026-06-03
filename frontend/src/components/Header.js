@@ -74,7 +74,7 @@ const Header = ({ role, token, username, cart, searchQuery, setSearchQuery, hand
 
           {/* Навигация справа */}
           <nav style={{ display: 'flex', gap: '25px', alignItems: 'center', flexShrink: 0 }}>
-            {role === 'admin' && <Link to="/admin" style={{ color: '#ff4444', textDecoration: 'none', fontWeight: 'bold' }}>АДМИНКА</Link>}
+            {role === 'admin' && <Link to="/admin" style={{ color: '#ff4444', textDecoration: 'none', fontWeight: 'bold' }}>АДМИН-ПАНЕЛЬ</Link>}
             
             {/* Кнопка сравнения */}
             {role !== 'admin' && compareList && compareList.length > 0 && (

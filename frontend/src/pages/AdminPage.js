@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { FiEdit3, FiPlusCircle, FiShoppingBag, FiPackage, FiChevronDown, FiChevronUp, FiLock } from 'react-icons/fi';
+import { FiEdit3, FiPlusCircle, FiShoppingBag, FiPackage, FiChevronDown, FiChevronUp, FiLock, FiGrid, FiTrash2 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
@@ -24,13 +24,14 @@ const STATUS_COLORS = {
   'Отменен':      { bg: '#fee2e2', color: '#dc2626' },
 };
 
-const AdminPage = ({ role, analytics, editingId, setEditingId, handleFileUpload, handleSubmitProduct, form, setForm, emptyForm, products, handleEditClick, handleDeleteProduct, handleAssignDiscount, orders, setOrders, authConfig }) => {
+const AdminPage = ({ role, analytics, editingId, setEditingId, handleFileUpload, handleSubmitProduct, form, setForm, emptyForm, products, categories, handleAddCategory, handleDeleteCategory, handleEditClick, handleDeleteProduct, handleAssignDiscount, orders, setOrders, authConfig, refreshAdminData }) => {
   const [discountPromptId, setDiscountPromptId] = useState(null);
   const [discountVal, setDiscountVal] = useState('');
   const fileInputRef = useRef(null);
-  const [activeTab, setActiveTab] = useState('products'); // 'products' | 'orders'
+  const [activeTab, setActiveTab] = useState('products'); // 'products' | 'orders' | 'categories'
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
+  const [newCatName, setNewCatName] = useState('');
 
   if (role !== 'admin') return <h2 style={{ textAlign: 'center', marginTop: '50px' }}>Доступ закрыт</h2>;
 
@@ -39,6 +40,8 @@ const AdminPage = ({ role, analytics, editingId, setEditingId, handleFileUpload,
     try {
       await axios.put(`http://localhost:5000/api/orders/${orderId}/status`, { status: newStatus }, authConfig);
       setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      // Обновляем аналитику если статус влияет на выручку
+      if (refreshAdminData) refreshAdminData();
     } catch (e) {
       alert('Ошибка обновления статуса');
     }
@@ -88,6 +91,9 @@ const AdminPage = ({ role, analytics, editingId, setEditingId, handleFileUpload,
         <button style={tabStyle('products')} onClick={() => setActiveTab('products')}>
           <FiPackage size={16} /> Товары ({products.length})
         </button>
+        <button style={tabStyle('categories')} onClick={() => setActiveTab('categories')}>
+          <FiGrid size={16} /> Категории ({categories?.length || 0})
+        </button>
         <button style={tabStyle('orders')} onClick={() => setActiveTab('orders')}>
           <FiShoppingBag size={16} /> Заказы ({orders.length})
         </button>
@@ -112,7 +118,10 @@ const AdminPage = ({ role, analytics, editingId, setEditingId, handleFileUpload,
               
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <input type="number" placeholder="Базовая цена" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} style={{ padding: '12px', border: '1px solid #ddd', borderRadius: '6px', flex: '1 1 100px', fontSize: '14px' }} />
-                <input placeholder="Категория" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={{ padding: '12px', border: '1px solid #ddd', borderRadius: '6px', flex: '1 1 100px', fontSize: '14px' }} />
+                <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={{ padding: '12px', border: '1px solid #ddd', borderRadius: '6px', flex: '1 1 100px', fontSize: '14px', background: 'white' }}>
+                  <option value="">Выберите категорию</option>
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
               </div>
               
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -206,6 +215,42 @@ const AdminPage = ({ role, analytics, editingId, setEditingId, handleFileUpload,
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ ВКЛАДКА: КАТЕГОРИИ ═══ */}
+      {activeTab === 'categories' && (
+        <div style={{ background: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+          <h2 style={{ marginBottom: '20px', fontSize: '20px' }}>Управление категориями</h2>
+          
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
+            <input 
+              placeholder="Название новой категории" 
+              value={newCatName} 
+              onChange={e => setNewCatName(e.target.value)} 
+              style={{ padding: '12px', border: '1px solid #ddd', borderRadius: '6px', flex: 1, fontSize: '14px' }} 
+            />
+            <button 
+              onClick={() => { if(newCatName.trim()) { handleAddCategory(newCatName); setNewCatName(''); } }}
+              style={{ padding: '12px 24px', background: '#28a745', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              Добавить
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
+            {categories.map(cat => (
+              <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' }}>
+                <span style={{ fontWeight: '600' }}>{cat.name}</span>
+                <button 
+                  onClick={() => handleDeleteCategory(cat.id)}
+                  style={{ background: 'none', border: 'none', color: '#dc3545', cursor: 'pointer', display: 'flex' }}
+                >
+                  <FiTrash2 size={18} />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}

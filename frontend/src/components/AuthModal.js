@@ -11,6 +11,7 @@ const AuthModal = ({ isOpen, onClose, onLogin, onRegister, authName, setAuthName
   // Поля регистрации
   const [email, setEmail] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreeToPrivacy, setAgreeToPrivacy] = useState(false);
   const [code, setCode] = useState('');
 
   // Восстановление пароля
@@ -32,6 +33,7 @@ const AuthModal = ({ isOpen, onClose, onLogin, onRegister, authName, setAuthName
       setSuccess('');
       setEmail('');
       setConfirmPassword('');
+      setAgreeToPrivacy(false);
       setCode('');
       setForgotEmail('');
       setForgotCode('');
@@ -58,6 +60,7 @@ const AuthModal = ({ isOpen, onClose, onLogin, onRegister, authName, setAuthName
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError('Укажите корректный email');
     if (!authPassword || authPassword.length < 6) return setError('Пароль: минимум 6 символов');
     if (authPassword !== confirmPassword) return setError('Пароли не совпадают');
+    if (!agreeToPrivacy) return setError('Необходимо согласие на обработку персональных данных');
 
     setLoading(true);
     try {
@@ -200,13 +203,33 @@ const AuthModal = ({ isOpen, onClose, onLogin, onRegister, authName, setAuthName
           {mode === 'register' && (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <label style={labelStyle}>Логин (имя пользователя)</label>
-              <input value={authName} onChange={e => setAuthName(e.target.value)} placeholder="minumum 3 символа" style={inputStyle} />
+              <input value={authName} onChange={e => setAuthName(e.target.value)} placeholder="Минимум 3 символа" style={inputStyle} />
               <label style={labelStyle}>Email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.ru" style={inputStyle} />
               <label style={labelStyle}>Пароль</label>
               <input type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} placeholder="Минимум 6 символов" style={inputStyle} />
               <label style={labelStyle}>Повторите пароль</label>
               <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Повторите пароль" style={inputStyle} />
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', marginBottom: '16px', marginTop: '2px' }}>
+                <input
+                  type="checkbox"
+                  checked={agreeToPrivacy}
+                  onChange={e => setAgreeToPrivacy(e.target.checked)}
+                  style={{ marginTop: '2px', accentColor: '#7A0000', width: '16px', height: '16px', flexShrink: 0, cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '12px', color: '#555', lineHeight: '1.5' }}>
+                  Я прочитал(а) и соглашаюсь с{' '}
+                  <a
+                    href="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#7A0000', fontWeight: '600', textDecoration: 'underline' }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    Политикой обработки персональных данных
+                  </a>
+                </span>
+              </label>
               <button type="button" onClick={handleSendRegisterCode} style={btnPrimary} disabled={loading}>
                 {loading ? 'Отправка...' : 'Получить код подтверждения'}
               </button>

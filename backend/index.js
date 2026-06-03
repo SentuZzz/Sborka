@@ -59,6 +59,13 @@ const initDB = async () => {
     await pool.query(`CREATE TABLE IF NOT EXISTS reviews (id SERIAL PRIMARY KEY, product_id INTEGER REFERENCES products(id) ON DELETE CASCADE, username VARCHAR(255), rating INTEGER CHECK (rating>=1 AND rating<=5), comment TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`);
     await pool.query(`CREATE TABLE IF NOT EXISTS wishlist (id SERIAL PRIMARY KEY, username VARCHAR(255), product_id INTEGER REFERENCES products(id) ON DELETE CASCADE, UNIQUE(username, product_id));`);
     
+    // Таблица категорий
+    await pool.query(`CREATE TABLE IF NOT EXISTS categories (id SERIAL PRIMARY KEY, name VARCHAR(100) UNIQUE NOT NULL);`);
+    const catCheck = await pool.query("SELECT COUNT(*) FROM categories");
+    if (catCheck.rows[0].count === '0') {
+      await pool.query("INSERT INTO categories (name) SELECT DISTINCT category FROM products WHERE category IS NOT NULL ON CONFLICT DO NOTHING");
+    }
+
     // Таблица кодов подтверждения (регистрация + сброс пароля)
     await pool.query(`CREATE TABLE IF NOT EXISTS email_codes (
       id SERIAL PRIMARY KEY,
@@ -290,6 +297,24 @@ app.put('/api/products/:id', isAdmin, async (req, res) => {
   }
 });
 app.delete('/api/products/:id', isAdmin, async (req, res) => { await pool.query('DELETE FROM products WHERE id=$1', [req.params.id]); res.json({ message: 'OK' }); });
+
+// КАТЕГОРИИ
+app.get('/api/categories', async (req, res) => {
+  try { res.json((await pool.query('SELECT * FROM categories ORDER BY name ASC')).rows); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/categories', isAdmin, async (req, res) => {
+  const { name } = req.body;
+  if (!name || typeof name !== 'string' || name.length < 1) return res.status(400).json({ error: 'Название категории обязательно' });
+  try {
+    const r = await pool.query('INSERT INTO categories (name) VALUES ($1) RETURNING *', [name]);
+    res.json(r.rows[0]);
+  } catch (e) { res.status(400).json({ error: 'Категория уже существует' }); }
+});
+app.delete('/api/categories/:id', isAdmin, async (req, res) => {
+  try { await pool.query('DELETE FROM categories WHERE id=$1', [req.params.id]); res.json({ message: 'OK' }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // ИЗБРАННОЕ
 app.get('/api/wishlist', authenticateToken, async (req, res) => { const r = await pool.query('SELECT p.* FROM products p JOIN wishlist w ON p.id=w.product_id WHERE w.username=$1', [req.user.username]); res.json(r.rows); });

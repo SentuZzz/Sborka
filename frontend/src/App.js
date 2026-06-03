@@ -19,6 +19,7 @@ import TermsPage from './pages/TermsPage';
 
 function App() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [orders, setOrders] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [myOrders, setMyOrders] = useState([]);
@@ -67,7 +68,7 @@ function App() {
     }
   };
   
-const emptyForm = { name: '', price: '', old_price: '', is_russian: false, category: '', brand: '', short_description: '', images: '', specs: '', stock_count: '' };
+const emptyForm = { name: '', price: '', old_price: '', is_russian: false, category: '', brand: '', short_description: '', images: '', specs: '', stock_count: '', sku: '' };
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   
@@ -97,19 +98,31 @@ const emptyForm = { name: '', price: '', old_price: '', is_russian: false, categ
     });
   }, [products]);
 
+  const refreshAdminData = (currentToken) => {
+    const cfg = { headers: { Authorization: `Bearer ${currentToken}` } };
+    axios.get('http://localhost:5000/api/orders', cfg).then(res => setOrders(res.data)).catch(() => {});
+    axios.get('http://localhost:5000/api/analytics', cfg).then(res => setAnalytics(res.data)).catch(() => {});
+  };
+
   useEffect(() => {
     setLoading(true);
     axios.get('http://localhost:5000/api/products')
       .then(res => { setProducts(res.data); setLoading(false); })
       .catch(() => setLoading(false));
+
+    axios.get('http://localhost:5000/api/categories')
+      .then(res => setCategories(res.data))
+      .catch(() => {});
+
     if (token) {
+      const cfg = { headers: { Authorization: `Bearer ${token}` } };
       if (role === 'admin') {
-        axios.get('http://localhost:5000/api/orders', authConfig).then(res => setOrders(res.data));
-        axios.get('http://localhost:5000/api/analytics', authConfig).then(res => setAnalytics(res.data));
+        axios.get('http://localhost:5000/api/orders', cfg).then(res => setOrders(res.data)).catch(() => {});
+        axios.get('http://localhost:5000/api/analytics', cfg).then(res => setAnalytics(res.data)).catch(() => {});
       } else {
-        axios.get('http://localhost:5000/api/wishlist', authConfig).then(res => setWishlist(res.data));
-        axios.get('http://localhost:5000/api/profile', authConfig).then(res => setProfile({ phone: res.data.phone || '', address: res.data.address || '' }));
-        axios.get('http://localhost:5000/api/orders/my', authConfig).then(res => setMyOrders(res.data));
+        axios.get('http://localhost:5000/api/wishlist', cfg).then(res => setWishlist(res.data)).catch(() => {});
+        axios.get('http://localhost:5000/api/profile', cfg).then(res => setProfile({ phone: res.data.phone || '', address: res.data.address || '' })).catch(() => {});
+        axios.get('http://localhost:5000/api/orders/my', cfg).then(res => setMyOrders(res.data)).catch(() => {});
       }
     }
   }, [role, token]);
@@ -268,6 +281,24 @@ const emptyForm = { name: '', price: '', old_price: '', is_russian: false, categ
   
   const handleEditClick = (p) => { setEditingId(p.id); setForm({ ...p, images: p.images ? p.images.join(', ') : '', specs: p.specs ? JSON.stringify(p.specs) : '', stock_count: p.stock_count ?? '' }); window.scrollTo(0, 0); };
 
+  const handleAddCategory = async (name) => {
+    try {
+      const res = await axios.post('http://localhost:5000/api/categories', { name }, authConfig);
+      setCategories([...categories, res.data]);
+      toast.success('Категория добавлена');
+    } catch (e) { toast.error(e.response?.data?.error || 'Ошибка'); }
+  };
+
+  const handleDeleteCategory = async (id) => {
+    if (window.confirm('Удалить категорию?')) {
+      try {
+        await axios.delete(`http://localhost:5000/api/categories/${id}`, authConfig);
+        setCategories(categories.filter(c => c.id !== id));
+        toast.success('Категория удалена');
+      } catch (e) { toast.error('Ошибка удаления'); }
+    }
+  };
+
   return (
     <BrowserRouter>
       <ScrollToTop />
@@ -289,7 +320,7 @@ const emptyForm = { name: '', price: '', old_price: '', is_russian: false, categ
             <Route path="/info" element={<InfoPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
-            <Route path="/admin" element={<AdminPage role={role} analytics={analytics} editingId={editingId} setEditingId={setEditingId} handleFileUpload={handleFileUpload} handleSubmitProduct={handleSubmitProduct} form={form} setForm={setForm} emptyForm={emptyForm} products={products} handleEditClick={handleEditClick} handleDeleteProduct={handleDeleteProduct} handleAssignDiscount={handleAssignDiscount} orders={orders} setOrders={setOrders} authConfig={authConfig} />} />
+            <Route path="/admin" element={<AdminPage role={role} analytics={analytics} editingId={editingId} setEditingId={setEditingId} handleFileUpload={handleFileUpload} handleSubmitProduct={handleSubmitProduct} form={form} setForm={setForm} emptyForm={emptyForm} products={products} categories={categories} handleAddCategory={handleAddCategory} handleDeleteCategory={handleDeleteCategory} handleEditClick={handleEditClick} handleDeleteProduct={handleDeleteProduct} handleAssignDiscount={handleAssignDiscount} orders={orders} setOrders={setOrders} authConfig={authConfig} refreshAdminData={() => refreshAdminData(token)} />} />
           </Routes>
         </div>
         <Footer token={token} />
